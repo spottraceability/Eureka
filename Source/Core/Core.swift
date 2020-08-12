@@ -44,6 +44,9 @@ internal class RowDefaults {
 
 public struct CellProvider<Cell: BaseCell> where Cell: CellType {
 
+    //customization for optimization to allow sharing nib's of same cell type
+    private var cellCreationBlock: (()->(Cell?))? = nil
+    
     /// Nibname of the cell that will be created.
     public private (set) var nibName: String?
 
@@ -52,9 +55,10 @@ public struct CellProvider<Cell: BaseCell> where Cell: CellType {
 
     public init() {}
 
-    public init(nibName: String, bundle: Bundle? = nil) {
+    public init(nibName: String, bundle: Bundle? = nil, cellCreationBlock: (()->(Cell?))? = nil) {
         self.nibName = nibName
         self.bundle = bundle ?? Bundle(for: Cell.self)
+        self.cellCreationBlock = cellCreationBlock
     }
 
     /**
@@ -65,6 +69,12 @@ public struct CellProvider<Cell: BaseCell> where Cell: CellType {
      - returns: the cell
      */
     func makeCell(style: UITableViewCell.CellStyle) -> Cell {
+        
+        //check block first
+        if let cellCreationBlock = cellCreationBlock, let createdCell = cellCreationBlock() {
+            return createdCell
+        }
+        
         if let nibName = self.nibName {
             return bundle.loadNibNamed(nibName, owner: nil, options: nil)!.first as! Cell
         }
